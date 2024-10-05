@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "SerproCND",
     platforms: [
-            .iOS(.v14), .macOS(.v10_15)
+            .iOS(.v14), .macOS(.v11)
     ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.

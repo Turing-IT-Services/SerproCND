@@ -18,11 +18,13 @@ class AuthService {
         self.consumerSecret = consumerSecret
     }
 
-    func authenticate(completion: @escaping (Result<String, Error>) -> Void) {
+    /// Authenticates the service and returns an access token.
+    /// - Throws: `SerproError` if authentication fails.
+    /// - Returns: A string containing the access token.
+    func authenticate() async throws -> String {
         let credentials = "\(consumerKey):\(consumerSecret)"
         guard let credentialsData = credentials.data(using: .utf8) else {
-            completion(.failure(SerproError.invalidCredentials))
-            return
+            throw SerproError.invalidCredentials
         }
 
         let base64Credentials = credentialsData.base64EncodedString()
@@ -34,34 +36,15 @@ class AuthService {
 
         logger.debug("Sending authentication request")
 
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                self.logger.error("Authentication failed: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
+        let (data, _) = try await URLSession.shared.data(for: request)
 
-            guard let data = data else {
-                self.logger.error("No data received during authentication")
-                completion(.failure(SerproError.noData))
-                return
-            }
-
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                   let token = json["access_token"] as? String {
-                    self.logger.info("Authentication successful, token received")
-                    completion(.success(token))
-                } else {
-                    self.logger.error("Invalid response format during authentication")
-                    completion(.failure(SerproError.invalidResponse))
-                }
-            } catch {
-                self.logger.error("Error parsing authentication response: \(error.localizedDescription)")
-                completion(.failure(error))
-            }
+        guard let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+              let token = json["access_token"] as? String else {
+            logger.error("Invalid response format during authentication")
+            throw SerproError.invalidResponse
         }
 
-        task.resume()
+        logger.info("Authentication successful, token received")
+        return token
     }
 }

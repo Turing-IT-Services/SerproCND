@@ -16,11 +16,19 @@ class ConsultaCNDService {
         self.accessToken = token
     }
 
-    func consultaCND(tipoContribuinte: TipoContribuinte, contribuinteConsulta: String, codigoIdentificacao: String, gerarCertidaoPdf: Bool, chave: String? = nil, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+    /// Performs a CND consultation.
+    /// - Parameters:
+    ///   - tipoContribuinte: The type of taxpayer.
+    ///   - contribuinteConsulta: The taxpayer being consulted.
+    ///   - codigoIdentificacao: The identification code.
+    ///   - gerarCertidaoPdf: Whether to generate a PDF certificate.
+    ///   - chave: An optional key.
+    /// - Throws: `SerproError` if the consultation fails.
+    /// - Returns: A dictionary containing the response data.
+    func consultaCND(tipoContribuinte: TipoContribuinte, contribuinteConsulta: String, codigoIdentificacao: String, gerarCertidaoPdf: Bool, chave: String? = nil) async throws -> [String: Any] {
         guard let token = accessToken else {
             logger.error("No access token available for consulta CND")
-            completion(.failure(SerproError.noAccessToken))
-            return
+            throw SerproError.noAccessToken
         }
 
         var request = URLRequest(url: URL(string: "https://gateway.apiserpro.serpro.gov.br/consulta-cnd-trial/v1/certidao")!)
@@ -43,42 +51,23 @@ class ConsultaCNDService {
 
         logger.debug("Sending consulta CND request with body: \(body)")
 
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                self.logger.error("Consulta CND failed: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
+        let (data, _) = try await URLSession.shared.data(for: request)
 
-            guard let data = data else {
-                self.logger.error("No data received during consulta CND")
-                completion(.failure(SerproError.noData))
-                return
-            }
-
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                    if let status = json["Status"] as? Int, status == 7, let chave = json["Chave"] as? String {
-                        self.logger.info("Consulta CND in processing, key received")
-                        completion(.failure(SerproError.processingKey(chave)))
-                    } else if let status = json["Status"] as? Int, status != 1 {
-                        let message = json["Messagem"] as? String ?? "Unknown error"
-                        self.logger.error("Consulta CND failed with status \(status): \(message)")
-                        completion(.failure(SerproError.serverError(status, message)))
-                    } else {
-                        self.logger.info("Consulta CND successful, response received")
-                        completion(.success(json))
-                    }
-                } else {
-                    self.logger.error("Invalid response format during consulta CND")
-                    completion(.failure(SerproError.invalidResponse))
-                }
-            } catch {
-                self.logger.error("Error parsing consulta CND response: \(error.localizedDescription)")
-                completion(.failure(error))
-            }
+        guard let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
+            logger.error("Invalid response format during consulta CND")
+            throw SerproError.invalidResponse
         }
 
-        task.resume()
+        if let status = json["Status"] as? Int, status == 7, let chave = json["Chave"] as? String {
+            logger.info("Consulta CND in processing, key received")
+            throw SerproError.processingKey(chave)
+        } else if let status = json["Status"] as? Int, status != 1 {
+            let message = json["Messagem"] as? String ?? "Unknown error"
+            logger.error("Consulta CND failed with status \(status): \(message)")
+            throw SerproError.serverError(status, message)
+        }
+
+        logger.info("Consulta CND successful, response received")
+        return json
     }
 }
