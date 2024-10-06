@@ -35,6 +35,22 @@ Após a autenticação, você pode realizar consultas de Certidão:
 
 
 swift serproAPI.consultaCND(tipoContribuinte: .pessoaJuridica, contribuinteConsulta: "00000000000001", codigoIdentificacao: "9001", gerarCertidaoPdf: true) { result in switch result { case .success(let response): print("Consulta bem-sucedida: (response)") case .failure(let error): print("Erro na consulta: (error)") } }
+
+### Consulta de CPF
+
+Após a autenticação, você pode realizar consultas de CPF:
+
+
+swift serproAPI.consultaCPF(ni: "99999999999") { result in switch result { case .success(let response): print("Consulta CPF bem-sucedida: (response)") case .failure(let error): print("Erro na consulta CPF: (error)") } }
+
+### Consulta de CNPJ
+
+Após a autenticação, você pode realizar consultas de CNPJ:
+
+
+swift serproAPI.consultaCNPJBasico(ni: "12345678000195") { result in switch result { case .success(let response): print("Consulta CNPJ bem-sucedida: (response)") case .failure(let error): print("Erro na consulta CNPJ: (error)") } }
+
+
 ## Tratamento de Erros
 
 O pacote define erros específicos que podem ser tratados:

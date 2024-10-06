@@ -10,20 +10,24 @@ import OSLog
 
 public struct SerproAPI {
     private let authService: AuthService
-    private let consultaService: ConsultaCNDService
-    private let logger = Logger(subsystem: "com.yourcompany.SerproAPI", category: "network")
+    private let consultaCNDService: ConsultaCNDService
+    private let consultaCPFService: ConsultaCPFService
+    private let consultaCNPJService: ConsultaCNPJService
+    private let logger = Logger(subsystem: "com.turingits.SerproAPI", category: "network")
 
     public init(consumerKey: String, consumerSecret: String) {
         self.authService = AuthService(consumerKey: consumerKey, consumerSecret: consumerSecret)
-        self.consultaService = ConsultaCNDService()
+        self.consultaCNDService = ConsultaCNDService()
+        self.consultaCPFService = ConsultaCPFService()
+        self.consultaCNPJService = ConsultaCNPJService()
     }
 
-    /// Authenticates the API and updates the access token.
-    /// - Throws: `SerproError` if authentication fails.
     public func authenticate() async throws {
         do {
             let token = try await authService.authenticate()
-            consultaService.updateAccessToken(token)
+            consultaCNDService.updateAccessToken(token)
+            consultaCPFService.updateAccessToken(token)
+            consultaCNPJService.updateAccessToken(token)
             logger.info("Authentication successful")
         } catch {
             logger.error("Authentication failed: \(error.localizedDescription)")
@@ -31,22 +35,35 @@ public struct SerproAPI {
         }
     }
 
-    /// Performs a CND consultation.
-    /// - Parameters:
-    ///   - tipoContribuinte: The type of taxpayer.
-    ///   - contribuinteConsulta: The taxpayer being consulted.
-    ///   - codigoIdentificacao: The identification code.
-    ///   - gerarCertidaoPdf: Whether to generate a PDF certificate.
-    ///   - chave: An optional key.
-    /// - Throws: `SerproError` if the consultation fails.
-    /// - Returns: A dictionary containing the response data.
     public func consultaCND(tipoContribuinte: TipoContribuinte, contribuinteConsulta: String, codigoIdentificacao: String, gerarCertidaoPdf: Bool, chave: String? = nil) async throws -> [String: Any] {
         do {
-            let response = try await consultaService.consultaCND(tipoContribuinte: tipoContribuinte, contribuinteConsulta: contribuinteConsulta, codigoIdentificacao: codigoIdentificacao, gerarCertidaoPdf: gerarCertidaoPdf, chave: chave)
+            let response = try await consultaCNDService.consultaCND(tipoContribuinte: tipoContribuinte, contribuinteConsulta: contribuinteConsulta, codigoIdentificacao: codigoIdentificacao, gerarCertidaoPdf: gerarCertidaoPdf, chave: chave)
             logger.info("Consulta CND successful")
             return response
         } catch {
             logger.error("Consulta CND failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    public func consultaCPF(ni: String, xSignature: String? = nil, xRequestTag: String? = nil) async throws -> [String: Any] {
+        do {
+            let response = try await consultaCPFService.consultaCPF(ni: ni, xSignature: xSignature, xRequestTag: xRequestTag)
+            logger.info("Consulta CPF successful")
+            return response
+        } catch {
+            logger.error("Consulta CPF failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    public func consultaCNPJBasico(ni: String, xSignature: String? = nil, xRequestTag: String? = nil) async throws -> [String: Any] {
+        do {
+            let response = try await consultaCNPJService.consultaCNPJBasico(ni: ni, xSignature: xSignature, xRequestTag: xRequestTag)
+            logger.info("Consulta CNPJ Basico successful")
+            return response
+        } catch {
+            logger.error("Consulta CNPJ Basico failed: \(error.localizedDescription)")
             throw error
         }
     }

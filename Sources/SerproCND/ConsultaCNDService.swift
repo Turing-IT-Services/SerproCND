@@ -10,7 +10,7 @@ import OSLog
 
 class ConsultaCNDService {
     private var accessToken: String?
-    private let logger = Logger(subsystem: "com.yourcompany.SerproAPI", category: "consulta")
+    private let logger = Logger(subsystem: "com.turingits.SerproAPI", category: "consulta")
 
     func updateAccessToken(_ token: String) {
         self.accessToken = token
